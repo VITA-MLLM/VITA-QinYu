@@ -1,0 +1,56 @@
+# ===================================================================
+# Config for Text-to-Speaker-Embedding Generation Task (Qwen3-0.6B)
+# ===================================================================
+
+# Seeds
+__set_seed1: !apply:random.seed [2024]
+__set_seed2: !apply:numpy.random.seed [2024]
+__set_seed3: !apply:torch.manual_seed [2024]
+__set_seed4: !apply:torch.cuda.manual_seed_all [2024]
+
+model_name: ''
+
+# ===================================================================
+# GLOBAL
+# ===================================================================
+spk_embed_dim: 192
+text_embed_dim: 1024   # Qwen3-Embedding-0.6B hidden size; 需与模型一致
+
+# ===================================================================
+# MODEL DEFINITION
+# ===================================================================
+
+# Estimator (DiT)
+estimator: !new:VoiceDesign.models.flow.dit_estimator.Decoder
+  hidden_channels: 384
+  out_channels: !ref <spk_embed_dim>
+  filter_channels: 512
+  dropout: 0.01
+  n_layers: 4
+  n_heads: 4
+  kernel_size: 3
+  gin_channels: !ref <spk_embed_dim>   # 条件输入投影到与目标相同维度
+
+# CFM decoder
+cfm_decoder: !new:VoiceDesign.models.flow.flow_matching_text_to_spk.ConditionalCFMForSpeakerEmbedding
+  spk_embed_dim: !ref <spk_embed_dim>
+  cfm_params: !new:omegaconf.DictConfig
+    content:
+      sigma_min: 1e-06
+      solver: 'euler'
+      t_scheduler: 'cosine'
+      training_cfg_rate: 0.2   # 降低训练丢条件比例，增强文本引导
+      inference_cfg_rate: 0.7   # 推理更依赖文本条件（已在代码中做CFG健壮）
+      reg_loss_type: 'l1'
+  text_encoder_config:
+    model_name: !ref <model_name> 
+    max_length: 512
+    hidden_dim: !ref <text_embed_dim>  # 若模型config可自动推断，可保留为768
+    output_dim: !ref <spk_embed_dim>   # 投影到目标维度（与 gin_channels 对齐）
+  estimator: !ref <estimator>
+
+# Top-level flow
+flow: !new:VoiceDesign.models.flow.flow_text_to_spk.Text2SpeakerEmbeddingFlow
+  spk_embed_dim: !ref <spk_embed_dim>
+  decoder: !ref <cfm_decoder>
+

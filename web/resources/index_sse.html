@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VITA-Audio Demo (SSE)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0f0f0 100%);
+        }
+
+        /* 让登录区和主内容区都居中 */
+        #authSection, #mainSection {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100vw;
+        }
+
+        .container, #authSection {
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255,255,255,0.95);
+            padding: 30px 30px 20px 30px;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto; /* 水平居中 */
+        }
+
+        .banner-img {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 2.2rem;
+            color: #3b3b6d;
+            letter-spacing: 1px;
+        }
+        h2 {
+            color: #5a5a89;
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        canvas {
+            border: 1.5px solid #b3b3e6;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #f8f9ff;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 24px;
+            background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s;
+            box-shadow: 0 2px 8px rgba(100,100,200,0.08);
+        }
+        button:disabled {
+            background: #bdbdbd;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            box-shadow: 0 4px 16px rgba(100,100,200,0.18);
+            transform: translateY(-2px) scale(1.03);
+        }
+        .alert {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f44336;
+            color: white;
+            border-radius: 5px;
+        }
+        .text-input-container {
+            margin-top: 30px;
+        }
+        .text-input-container textarea {
+            padding: 12px;
+            font-size: 16px;
+            width: 90%;
+            height: 120px;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            border: 1.5px solid #b3b3e6;
+            background: #f8f9ff;
+            resize: none;
+            overflow: auto;
+            word-wrap: break-word;
+            transition: border 0.2s;
+        }
+        .text-input-container textarea:focus {
+            border: 1.5px solid #6a82fb;
+            outline: none;
+        }
+        .input-icon {
+            margin-right: 6px;
+            color: #6a82fb;
+        }
+        .audio-icon {
+            color: #fc5c7d;
+            margin-right: 6px;
+        }
+        .time-box {
+            font-size: 1.2rem;
+            padding: 12px;
+            background-color: #e0e7ff;
+            border-radius: 8px;
+            color: #3b3b6d;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .status-box {
+            font-size: 1rem;
+            padding: 8px;
+            background-color: #f0f8ff;
+            border-radius: 6px;
+            color: #2c5aa0;
+            text-align: center;
+            margin-top: 10px;
+            border: 1px solid #b3d9ff;
+        }
+        /* Responsive */
+        @media (max-width: 800px) {
+            .container { max-width: 98vw; }
+            .banner-img { max-width: 98vw; }
+        }
+    </style>
+</head>
+<body>
+    <div id="mainSection">
+        <div class="container">
+            <img src="https://raw.githubusercontent.com/VITA-MLLM/VITA-Audio/refs/heads/main/asset/vita-audio_logo.jpg" class="banner-img" alt="Banner">
+            <button id="connectButton"><i class="fa-solid fa-plug"></i> Connect</button>
+            <button id="startButton" disabled><i class="fa-solid fa-microphone"></i> Dialogue Start</button>
+            <button id="stopButton" disabled><i class="fa-solid fa-stop"></i> Dialogue Stop</button>
+            <button id="disconnectButton" disabled><i class="fa-solid fa-plug-circle-xmark"></i> Disconnect</button>
+            
+            <div id="statusBox" class="status-box">
+                未连接
+            </div>
+            
+            <h2><i class="fa-solid fa-wave-square audio-icon"></i>Input Waveform</h2>
+            <canvas id="inputCanvas" width="600" height="100"></canvas>
+            <h2><i class="fa-solid fa-wave-square audio-icon"></i>Output Waveform</h2>
+            <canvas id="outputCanvas" width="600" height="100"></canvas>
+            <audio id="remoteAudio" autoplay playsinline></audio>
+            
+            <div id="alertBox" class="alert">Too many users connected. Please refresh and try again.</div>
+            <div id="alertBox2" class="alert">Connect time out. Please refresh and reconnect.</div>
+            <div id="alertBox3" class="alert">Prompt set success.</div>
+            
+            <h2><i class="fa-solid fa-clock"></i> First Audio Generation Time</h2>
+            <div id="generationTime" class="time-box">
+                Waiting for first audio...
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let userId = null;
+        let eventSource = null;
+        let isConnected = false;
+        
+        // DOM元素
+        const connectButton = document.getElementById('connectButton');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const disconnectButton = document.getElementById('disconnectButton');
+        const statusBox = document.getElementById('statusBox');
+        const inputCanvas = document.getElementById('inputCanvas');
+        const outputCanvas = document.getElementById('outputCanvas');
+        const inputCtx = inputCanvas.getContext('2d');
+        const outputCtx = outputCanvas.getContext('2d');
+        const alertBox = document.getElementById('alertBox');
+        const alertBox2 = document.getElementById('alertBox2');
+        const alertBox3 = document.getElementById('alertBox3');
+        const generationTime = document.getElementById('generationTime');
+
+        // 音频相关变量
+        const audioQueue = [];
+        let isPlaying = false;
+        let currentSource = null;
+        let localStream;
+        let audioContext;
+        let audioContext2;
+        let processor;
+        let isRecording = false;
+        const fixedSampleRate = 16000;
+
+        // 事件监听器
+        connectButton.addEventListener('click', connectToServer);
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
+        disconnectButton.addEventListener('click', disconnectFromServer);
+
+        // 初始化音频上下文
+        audioContext2 = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 22050 });
+
+        // 连接到服务器
+        async function connectToServer() {
+            try {
+                const response = await fetch('/vita/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.status === 429) {
+                    alertBox.style.display = 'block';
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.user_id) {
+                    userId = data.user_id;
+                    setupSSE();
+                    updateConnectionStatus(true);
+                    console.log('Connected with user ID:', userId);
+                }
+            } catch (error) {
+                console.error('Connection failed:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // 设置SSE连接
+        function setupSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource(`/events/${userId}`);
+
+            eventSource.onopen = function(event) {
+                console.log('SSE connection opened');
+                updateConnectionStatus(true);
+            };
+
+            eventSource.onerror = function(event) {
+                console.error('SSE connection error:', event);
+                updateConnectionStatus(false);
+            };
+
+            // 监听各种事件
+            eventSource.addEventListener('first_audio_time', function(event) {
+                const data = JSON.parse(event.data);
+                generationTime.textContent = data.time;
+            });
+
+            eventSource.addEventListener('audio', function(event) {
+                const data = JSON.parse(event.data);
+                // 解码base64音频数据
+                const audioData = atob(data.data);
+                const bytes = new Uint8Array(audioData.length);
+                for (let i = 0; i < audioData.length; i++) {
+                    bytes[i] = audioData.charCodeAt(i);
+                }
+                audioQueue.push(bytes.buffer);
+                if (!isPlaying) {
+                    playNextAudio();
+                }
+            });
+
+            eventSource.addEventListener('stop_tts', function(event) {
+                audioQueue.length = 0;
+                if (currentSource) {
+                    currentSource.stop();
+                    currentSource = null;
+                }
+                isPlaying = false;
+            });
+
+            eventSource.addEventListener('out_time', function(event) {
+                alertBox2.style.display = 'block';
+                updateConnectionStatus(false);
+            });
+
+            eventSource.addEventListener('heartbeat', function(event) {
+                // 心跳消息，保持连接活跃
+                console.log('Heartbeat received');
+            });
+        }
+
+        // 断开连接
+        async function disconnectFromServer() {
+            if (userId) {
+                try {
+                    await fetch(`/vita/disconnect/${userId}`, {
+                        method: 'POST'
+                    });
+                } catch (error) {
+                    console.error('Disconnect failed:', error);
+                }
+            }
+
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            userId = null;
+            updateConnectionStatus(false);
+            console.log('Disconnected from server');
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            if (connected) {
+                connectButton.disabled = true;
+                startButton.disabled = false;
+                disconnectButton.disabled = false;
+                statusBox.textContent = '已连接';
+                statusBox.style.backgroundColor = '#e8f5e8';
+                statusBox.style.color = '#2e7d32';
+                statusBox.style.borderColor = '#81c784';
+            } else {
+                connectButton.disabled = false;
+                startButton.disabled = true;
+                stopButton.disabled = true;
+                disconnectButton.disabled = true;
+                statusBox.textContent = '未连接';
+                statusBox.style.backgroundColor = '#f0f8ff';
+                statusBox.style.color = '#2c5aa0';
+                statusBox.style.borderColor = '#b3d9ff';
+                
+                // 停止录音
+                if (isRecording) {
+                    stopRecording();
+                }
+            }
+        }
+
+        // 开始录音
+        async function startRecording() {
+            if (!isConnected || !userId) {
+                alert('请先连接到服务器');
+                return;
+            }
+
+            audioQueue.length = 0;
+            if (currentSource) {
+                currentSource.stop();
+                currentSource = null;
+            }
+            isPlaying = false;
+            
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (processor) {
+                processor.disconnect();
+            }
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        autoGainControl: false, 
+                        echoCancellation: true, 
+                        noiseSuppression: false, 
+                        latency: 0.001
+                    } 
+                });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: fixedSampleRate });
+                const input = audioContext.createMediaStreamSource(localStream);
+                processor = audioContext.createScriptProcessor(256, 1, 1);
+
+                processor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
+
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const int16Array = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        int16Array[i] = inputData[i] * 0x7FFF;
+                    }
+                    
+                    // 发送音频数据
+                    sendAudioData({
+                        sample_rate: audioContext.sampleRate,
+                        audio: Array.from(new Uint8Array(int16Array.buffer))
+                    });
+                    
+                    drawWaveform(inputData, inputCtx);
+                };
+
+                input.connect(processor);
+                processor.connect(audioContext.destination);
+
+                isRecording = true;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+
+                // 通知服务器开始录音
+                await fetch(`/vita/recording-started/${userId}`, {
+                    method: 'POST'
+                });
+
+            } catch (error) {
+                console.error('Failed to start recording:', error);
+                alert('无法访问麦克风，请检查权限设置');
+            }
+        }
+
+        // 停止录音
+        async function stopRecording() {
+            audioQueue.length = 0;
+            if (currentSource) {
+                currentSource.stop();
+                currentSource = null;
+            }
+            isPlaying = false;
+            isRecording = false;
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            startButton.disabled = false;
+            stopButton.disabled = true;
+
+            if (userId) {
+                // 通知服务器停止录音
+                await fetch(`/vita/recording-stopped/${userId}`, {
+                    method: 'POST'
+                });
+            }
+        }
+
+        // 发送音频数据
+        async function sendAudioData(audioData) {
+            if (!userId) return;
+
+            try {
+                await fetch(`/vita/audio/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(audioData)
+                });
+            } catch (error) {
+                console.error('Failed to send audio data:', error);
+            }
+        }
+
+        // 播放下一个音频
+        function playNextAudio() {
+            if (audioQueue.length === 0) {
+                isPlaying = false;
+                if (userId) {
+                    fetch(`/vita/tts-stopped/${userId}`, { method: 'POST' });
+                }
+                return;
+            }
+
+            isPlaying = true;
+            if (userId) {
+                fetch(`/vita/tts-playing/${userId}`, { method: 'POST' });
+            }
+
+            const data = audioQueue.shift();
+            const int16Array = new Int16Array(data);
+            const float32Array = new Float32Array(int16Array.length);
+            
+            for (let i = 0; i < int16Array.length; i++) {
+                float32Array[i] = int16Array[i] / 32768.0;
+            }
+
+            const audioBuffer = audioContext2.createBuffer(1, float32Array.length, audioContext2.sampleRate);
+            drawWaveform(float32Array, outputCtx);
+            audioBuffer.copyToChannel(float32Array, 0);
+            
+            const source = audioContext2.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext2.destination);
+            source.start();
+
+            currentSource = source;
+
+            source.onended = () => {
+                currentSource = null;
+                playNextAudio();
+            };
+        }
+
+        // 绘制波形
+        function drawWaveform(data, context) {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+            context.beginPath();
+            context.moveTo(0, context.canvas.height / 2);
+            for (let i = 0; i < data.length; i++) {
+                const x = (i / data.length) * context.canvas.width;
+                const y = (1 - data[i]) * context.canvas.height / 2;
+                context.lineTo(x, y);
+            }
+            context.stroke();
+        }
+
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', function() {
+            if (isConnected) {
+                disconnectFromServer();
+            }
+        });
+
+    </script>
+</body>
+</html> 

@@ -1,0 +1,164 @@
+# VITA-QinYu Web Demo Configuration File
+
+# ============================================================================
+# Server Configuration
+# ============================================================================
+server:
+  ip: '0.0.0.0'
+  port: 8081
+  max_users: 20
+  timeout: 600  # seconds
+  ssl_enabled: false
+  cert_file: "web/resources/cert.pem"
+  key_file: "web/resources/key.pem"
+
+# ============================================================================
+# Model Configuration
+# ============================================================================
+model:
+  # Model paths
+  # model_name_or_path: "/vita-qinyu-models/checkpoint-12000-utu-sing-roleplay"
+  model_name_or_path: "/vita-qinyu-models/VITA-QinYu-4B"
+  audio_tokenizer_path:
+    - "/vita-qinyu-models/VITA-QinYu-Models/xy_tokenizer.ckpt"
+    - "/vita-qinyu-models/VITA-QinYu-Models/campplus_cn_common.bin"
+    - "/vita-qinyu-models/FunAudioLLM/SenseVoiceSmall"
+  audio_tokenizer_type: "sensevoice_xytokenizer_speaker"
+
+  # Speaker embeddings
+  spk2emb_path: "/vita-qinyu-models/VITA-QinYu-Models/spk2embeds_roleplay.pt"
+
+  # Device settings
+  device_map: "cuda:0"
+  torch_dtype: "bfloat16"  # bfloat16, float16, float32
+  audio_tokenizer_rank: 0
+
+  # Model parameters
+  attn_implementation: "flash_attention_2"
+  extra_sensevoice_token: true
+  text_audio_interval_ratio: [4, 8]
+
+# ============================================================================
+# Generation Configuration
+# ============================================================================
+generation:
+  max_new_tokens: 8192
+  chat_format: "chatml"
+  max_window_size: 8192
+  use_cache: true
+  do_sample: false
+  temperature: 1.0
+  top_k: 50
+  top_p: 1.0
+  num_beams: 1
+
+# ============================================================================
+# Turn Detection Model Configuration
+# ============================================================================
+turn_detection:
+  model_id: '/vita-qinyu-models/TEN-framework/TEN_Turn_Detection'
+  torch_dtype: "bfloat16"
+  system_prompt: "Determine if this user input requires a response from the assistant."
+
+# ============================================================================
+# ASR (Whisper) Configuration
+# ============================================================================
+asr:
+  model_id: '/vita-qinyu-models/openai/whisper-large-v3'
+  torch_dtype: "float32"
+  device_map: "auto"
+  use_safetensors: true
+  language: "zh"
+  task: "transcribe"
+  max_new_tokens: 128
+  fallback_model_id: "openai/whisper-base"
+
+# ============================================================================
+# Voice Design (Timbre) Model Configuration
+# ============================================================================
+voice_design:
+  text_encoder_ckpt: '/vita-qinyu-models/VITA-QinYu-models/voicedesign/Qwen3-Embedding-0.6B'
+  text_spk_ckpt: '/vita-qinyu-models/VITA-QinYu-Models/voicedesign/voicedesign.pt'
+  text_spk_config: './VoiceDesign/config/voicedesign_qwen3_0.6B.yaml'
+  n_timesteps: 20
+  temperature: 1.0
+
+# ============================================================================
+# Mode Configuration
+# ============================================================================
+mode:
+  type: 'roleplay'  # default, roleplay
+  role_description: '该角色是一个中年男性， 身份是修真界的前辈高人, 性格沉稳淡定，善于提出建设性意见，气质偏向智者风格。'
+  default_speaker: 'tian'  # Used in default mode
+
+  # System messages
+  default_system_message:
+    name: "QinYu-4o"
+    origin: "TME and Youtu Collaboration"
+    response_mode: "text-audio interleaved"
+    voice_embedding_tag: "<|speaker|>"
+    role_description: "一个声音可爱甜美的女性。"
+
+# ============================================================================
+# Streaming Parameters
+# ============================================================================
+streaming:
+  max_code_length: 50  # chunk_size
+  first_code_length: 16  # first chunk size
+  fade_code_length: 4  # overlap tokens
+  cache_wav_len: 6400
+  num_history: 4  # Number of history turns to keep
+
+# ============================================================================
+# Audio Processing Configuration
+# ============================================================================
+audio:
+  target_sample_rate: 16000
+  chunk_size: 4096  # PCM chunk size
+  min_audio_duration: 1.0  # Minimum audio duration in seconds
+
+# ============================================================================
+# Special Tokens
+# ============================================================================
+tokens:
+  speaker_tag: '<|speaker|>'
+  user_speaker_tag: "<|user_speaker|>"
+  audio_tag: "<|audio|>"
+  audio_context: "<|context_of_audio|>"
+  audio_start: "<|begin_of_audio|>"
+  audio_end: "<|end_of_audio|>"
+  conv_end: "<|end_of_conv|>"
+  first_audio_token: '<|audio_0_0|>'
+  last_audio_token: '<|audio_7_7_pad|>'
+  im_end: '<|im_end|>'
+
+# ============================================================================
+# Paths and Directories
+# ============================================================================
+paths:
+  chat_history_dir: "./chat_history"
+  output_dir: "output"
+  resources_dir: "web/resources"
+  warmup_audio: "asset/介绍一下上海.wav"
+
+# ============================================================================
+# Logging Configuration
+# ============================================================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# ============================================================================
+# System Paths (Python path additions)
+# ============================================================================
+system_paths:
+  - "third_party/MOSS-TTSD-v0.7/XY_Tokenizer"
+  - "third_party/GLM-4-Voice"
+  - "third_party/GLM-4-Voice/third_party/Matcha-TTS/"
+  - "third_party/3D-Speaker"
+
+# ============================================================================
+# Random Seed Configuration
+# ============================================================================
+random:
+  seed: 28
+  torch_manual_seed: 28
