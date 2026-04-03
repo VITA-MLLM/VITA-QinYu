@@ -22,7 +22,7 @@
 
 ## :fire: RoadMap
 
-- **`2026.04.x`** 🌟 We release VITA-QinYu with model weights, inference & training code and web demo.
+- **`2026.04.03`** 🌟 We release VITA-QinYu with model weights, inference & training code and web demo. Singing checkpoint is under internal review.
 
 ## 🔔 Models
 
