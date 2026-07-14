@@ -5,7 +5,7 @@
 </p>
 
 <div align="center">
-    <a href=""><img src="https://img.shields.io/badge/arXiv-coming soon-b31b1b.svg?logo=arxiv&logoColor=white" alt="arXiv:coming soon"></a>
+    <a href="https://arxiv.org/pdf/2605.06765"><img src="https://img.shields.io/badge/arXiv-2605.06765-b31b1b.svg?logo=arxiv&logoColor=white" alt="arXiv:2605.06765"></a>
     <a href='https://tme-lyra-lab.github.io/VITA-QinYu/'><img src='https://img.shields.io/badge/GitHub-Demo-orange?logo=github'/></a>
     <a href='https://huggingface.co/collections/VITA-MLLM/vita-qinyu'><img src='https://img.shields.io/badge/HuggingFace-Model-blue?logo=huggingface' /> </a>
 </div>
